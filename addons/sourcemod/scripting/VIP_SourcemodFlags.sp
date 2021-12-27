@@ -219,10 +219,13 @@ stock void LoadClient(int client)
 	ArrayList Groups = new ArrayList(ByteCountToCells(32));
 	char sVIPGroupName[64];
 
-	g_cvVIPGroupName.GetString(sVIPGroupName, sizeof(sVIPGroupName));
-
 	if (VIP_IsClientVIP(client))
+	{
+		if (!VIP_GetClientVIPGroup(client, sVIPGroupName, sizeof(sVIPGroupName)))
+			g_cvVIPGroupName.GetString(sVIPGroupName, sizeof(sVIPGroupName));
+
 		Groups.PushString(sVIPGroupName);
+	}
 
 	if (Groups.Length)
 	{
@@ -241,6 +244,7 @@ stock void LoadClient(int client)
 			if (!curAdm.BindIdentity(sAuthType, sAuth))
 			{
 				RemoveAdmin(curAdm);
+				delete Groups;
 				return;
 			}
 		}
