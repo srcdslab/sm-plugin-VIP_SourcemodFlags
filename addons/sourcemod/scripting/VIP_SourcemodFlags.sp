@@ -1,13 +1,14 @@
 #pragma semicolon 1
 
 #include <sourcemod>
-#include <sourcebanspp>
 #include <vip_core>
 #include <multicolors>
 #include <utilshelper>
 
 #undef REQUIRE_PLUGIN
-#include <ccc>
+#tryinclude <ccc>
+#tryinclude <sourcebanspp>
+#define REQUIRE_PLUGIN
 
 #pragma newdecls required
 
