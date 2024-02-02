@@ -27,7 +27,7 @@ public Plugin myinfo =
 	name = "[VIP] Sourcemod Flags",
 	author = "R1KO & inGame & maxime1907",
 	description = "Sets the sourcemod flags related to VIP features",
-	version = "3.2"
+	version = "3.2.1"
 };
 
 public void OnAllPluginsLoaded()
@@ -93,7 +93,7 @@ public Action Command_GetImmunityLevel(int client, int args)
 	bool bIsML;
 	GetCmdArg(1, argTarget, sizeof(argTarget));
 
-	if((iTargetCount = ProcessTargetString(argTarget, client, iTargets, MAXPLAYERS, COMMAND_FILTER_CONNECTED, sTargetName, sizeof(sTargetName), bIsML)) <= 0)
+	if((iTargetCount = ProcessTargetString(argTarget, client, iTargets, MAXPLAYERS, COMMAND_FILTER_CONNECTED | COMMAND_FILTER_NO_IMMUNITY, sTargetName, sizeof(sTargetName), bIsML)) <= 0)
 	{
 		ReplyToTargetError(client, iTargetCount);
 		return Plugin_Handled;
@@ -163,12 +163,29 @@ public void VIP_OnVIPLoaded()
 
 public void VIP_OnClientLoaded(int client, bool isVip)
 {
-	LoadVIPClient(client);
+	CreateTimer(1.0, Timer_LoadVIPClient, GetClientUserId(client));
 }
 
 public void VIP_OnVIPClientAdded(int client, int iAdmin)
 {
+	CreateTimer(1.0, Timer_LoadVIPClient, GetClientUserId(client));
+}
+
+public Action Timer_LoadVIPClient(Handle timer, int userid)
+{
+	int client = GetClientOfUserId(userid);
+
+	if(!client)
+		return Plugin_Stop;
+
+	if(client < 1)
+		return Plugin_Stop;
+
+	if(!IsClientInGame(client))
+		return Plugin_Stop;
+
 	LoadVIPClient(client);
+	return Plugin_Continue;
 }
 
 public void VIP_OnVIPClientRemoved(int client, const char[] szReason, int iAdmin)
@@ -180,7 +197,11 @@ stock void UnloadVIPClient(int client)
 {
 	RemoveClient(client);
 
-	if (g_bLibraryCCC)
+	bool bStatus = false;
+	if (GetFeatureStatus(FeatureType_Native, "CCC_UnLoadClient") == FeatureStatus_Available)
+		bStatus = true;
+
+	if (g_bLibraryCCC && bStatus)
 		CCC_UnLoadClient(client);
 
 	ServerCommand("sm_reloadadmins");
@@ -193,7 +214,11 @@ stock void LoadVIPClient(int client)
 
 	LoadClient(client);
 
-	if (g_bLibraryCCC)
+	bool bStatus = false;
+	if (GetFeatureStatus(FeatureType_Native, "CCC_LoadClient") == FeatureStatus_Available)
+		bStatus = true;
+
+	if (g_bLibraryCCC && bStatus)
 		CCC_LoadClient(client);
 }
 
@@ -236,11 +261,13 @@ stock void LoadClient(int client)
 
 		AdminId curAdm = INVALID_ADMIN_ID;
 		// find or create the admin using that identity
+		bool newAdmin = false;
 		if ((curAdm = FindAdminByIdentity(sAuthType, sAuth)) == INVALID_ADMIN_ID)
 		{
 			char sName[254];
 			GetClientName(client, sName, sizeof(sName));
 			curAdm = CreateAdmin(sName);
+			newAdmin = true;
 			// That should never happen!
 			if (!curAdm.BindIdentity(sAuthType, sAuth))
 			{
@@ -268,6 +295,10 @@ stock void LoadClient(int client)
 			}
 
 			AdminInheritGroup(curAdm, grp);
+			if(newAdmin == true)
+			{
+				SetUserAdmin(client, curAdm, true);
+			}
 		}
 	}
 
