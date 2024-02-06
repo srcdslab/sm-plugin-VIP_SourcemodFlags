@@ -27,7 +27,7 @@ public Plugin myinfo =
 	name = "[VIP] Sourcemod Flags",
 	author = "R1KO & inGame & maxime1907",
 	description = "Sets the sourcemod flags related to VIP features",
-	version = "3.2"
+	version = "3.2.1"
 };
 
 public void OnAllPluginsLoaded()
@@ -93,7 +93,7 @@ public Action Command_GetImmunityLevel(int client, int args)
 	bool bIsML;
 	GetCmdArg(1, argTarget, sizeof(argTarget));
 
-	if((iTargetCount = ProcessTargetString(argTarget, client, iTargets, MAXPLAYERS, COMMAND_FILTER_CONNECTED, sTargetName, sizeof(sTargetName), bIsML)) <= 0)
+	if((iTargetCount = ProcessTargetString(argTarget, client, iTargets, MAXPLAYERS, COMMAND_FILTER_CONNECTED | COMMAND_FILTER_NO_IMMUNITY, sTargetName, sizeof(sTargetName), bIsML)) <= 0)
 	{
 		ReplyToTargetError(client, iTargetCount);
 		return Plugin_Handled;
@@ -180,7 +180,7 @@ stock void UnloadVIPClient(int client)
 {
 	RemoveClient(client);
 
-	if (g_bLibraryCCC)
+	if (g_bLibraryCCC && GetFeatureStatus(FeatureType_Native, "CCC_UnLoadClient") == FeatureStatus_Available)
 		CCC_UnLoadClient(client);
 
 	ServerCommand("sm_reloadadmins");
@@ -193,7 +193,7 @@ stock void LoadVIPClient(int client)
 
 	LoadClient(client);
 
-	if (g_bLibraryCCC)
+	if (g_bLibraryCCC && GetFeatureStatus(FeatureType_Native, "CCC_LoadClient") == FeatureStatus_Available)
 		CCC_LoadClient(client);
 }
 
