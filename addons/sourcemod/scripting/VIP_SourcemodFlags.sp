@@ -163,29 +163,12 @@ public void VIP_OnVIPLoaded()
 
 public void VIP_OnClientLoaded(int client, bool isVip)
 {
-	CreateTimer(1.0, Timer_LoadVIPClient, GetClientUserId(client));
+	LoadVIPClient(client);
 }
 
 public void VIP_OnVIPClientAdded(int client, int iAdmin)
 {
-	CreateTimer(1.0, Timer_LoadVIPClient, GetClientUserId(client));
-}
-
-public Action Timer_LoadVIPClient(Handle timer, int userid)
-{
-	int client = GetClientOfUserId(userid);
-
-	if(!client)
-		return Plugin_Stop;
-
-	if(client < 1)
-		return Plugin_Stop;
-
-	if(!IsClientInGame(client))
-		return Plugin_Stop;
-
 	LoadVIPClient(client);
-	return Plugin_Continue;
 }
 
 public void VIP_OnVIPClientRemoved(int client, const char[] szReason, int iAdmin)
@@ -197,11 +180,7 @@ stock void UnloadVIPClient(int client)
 {
 	RemoveClient(client);
 
-	bool bStatus = false;
-	if (GetFeatureStatus(FeatureType_Native, "CCC_UnLoadClient") == FeatureStatus_Available)
-		bStatus = true;
-
-	if (g_bLibraryCCC && bStatus)
+	if (g_bLibraryCCC && GetFeatureStatus(FeatureType_Native, "CCC_UnLoadClient") == FeatureStatus_Available)
 		CCC_UnLoadClient(client);
 
 	ServerCommand("sm_reloadadmins");
@@ -214,11 +193,7 @@ stock void LoadVIPClient(int client)
 
 	LoadClient(client);
 
-	bool bStatus = false;
-	if (GetFeatureStatus(FeatureType_Native, "CCC_LoadClient") == FeatureStatus_Available)
-		bStatus = true;
-
-	if (g_bLibraryCCC && bStatus)
+	if (g_bLibraryCCC && GetFeatureStatus(FeatureType_Native, "CCC_LoadClient") == FeatureStatus_Available)
 		CCC_LoadClient(client);
 }
 
@@ -261,13 +236,11 @@ stock void LoadClient(int client)
 
 		AdminId curAdm = INVALID_ADMIN_ID;
 		// find or create the admin using that identity
-		bool newAdmin = false;
 		if ((curAdm = FindAdminByIdentity(sAuthType, sAuth)) == INVALID_ADMIN_ID)
 		{
 			char sName[254];
 			GetClientName(client, sName, sizeof(sName));
 			curAdm = CreateAdmin(sName);
-			newAdmin = true;
 			// That should never happen!
 			if (!curAdm.BindIdentity(sAuthType, sAuth))
 			{
@@ -295,10 +268,6 @@ stock void LoadClient(int client)
 			}
 
 			AdminInheritGroup(curAdm, grp);
-			if(newAdmin == true)
-			{
-				SetUserAdmin(client, curAdm, true);
-			}
 		}
 	}
 
