@@ -27,7 +27,7 @@ public Plugin myinfo =
 	name = "[VIP] Sourcemod Flags",
 	author = "R1KO & inGame & maxime1907",
 	description = "Sets the sourcemod flags related to VIP features",
-	version = "3.2.1"
+	version = "3.2.2"
 };
 
 public void OnAllPluginsLoaded()
@@ -112,7 +112,7 @@ public Action Command_GetImmunityLevel(int client, int args)
 public void OnRebuildAdminCache(AdminCachePart part)
 {
 	// Only do something if admins are being rebuild
-	if (part != AdminCache_Admins)
+	if (part == AdminCache_Overrides)
 		return;
 
 	if (g_bSbppClientsLoaded)
@@ -140,13 +140,13 @@ public Action OnClientPreAdminCheck(int client)
 
 public bool SBPP_OnClientPreAdminCheck(AdminCachePart part)
 {
-	if (part == AdminCache_Admins)
+	if (part != AdminCache_Overrides)
 		g_bSbppClientsLoaded = true;
 
 	for (int client = 1; client <= MaxClients; client++)
 		CheckLoadAdmin(client);
 
-	if (part == AdminCache_Admins)
+	if (part != AdminCache_Overrides)
 	{
 		if (g_bReloadVips)
 			ReloadVIPs();
