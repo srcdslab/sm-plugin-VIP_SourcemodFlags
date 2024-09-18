@@ -27,7 +27,7 @@ public Plugin myinfo =
 	name = "[VIP] Sourcemod Flags",
 	author = "R1KO & inGame & maxime1907",
 	description = "Sets the sourcemod flags related to VIP features",
-	version = "3.2.1"
+	version = "3.2.3"
 };
 
 public void OnAllPluginsLoaded()
@@ -138,6 +138,7 @@ public Action OnClientPreAdminCheck(int client)
 	return g_bSbppClientsLoaded && g_bClientLoaded[client] ? Plugin_Continue : Plugin_Handled;
 }
 
+#if defined _sourcebanspp_included
 public bool SBPP_OnClientPreAdminCheck(AdminCachePart part)
 {
 	if (part == AdminCache_Admins)
@@ -155,6 +156,7 @@ public bool SBPP_OnClientPreAdminCheck(AdminCachePart part)
 
 	return false;
 }
+#endif
 
 public void VIP_OnVIPLoaded()
 {
@@ -180,8 +182,10 @@ stock void UnloadVIPClient(int client)
 {
 	RemoveClient(client);
 
+#if defined _ccc_included
 	if (g_bLibraryCCC && GetFeatureStatus(FeatureType_Native, "CCC_UnLoadClient") == FeatureStatus_Available)
 		CCC_UnLoadClient(client);
+#endif
 
 	ServerCommand("sm_reloadadmins");
 }
@@ -193,8 +197,10 @@ stock void LoadVIPClient(int client)
 
 	LoadClient(client);
 
+#if defined _ccc_included
 	if (g_bLibraryCCC && GetFeatureStatus(FeatureType_Native, "CCC_LoadClient") == FeatureStatus_Available)
 		CCC_LoadClient(client);
+#endif
 }
 
 stock void RemoveClient(int client)
