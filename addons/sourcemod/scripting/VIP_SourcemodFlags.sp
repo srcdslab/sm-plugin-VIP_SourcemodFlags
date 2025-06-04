@@ -255,6 +255,53 @@ stock void LoadClient(int client)
 				return;
 			}
 		}
+		else
+		{
+			// Check if admin has important flags
+			bool hasImportantFlags = false;
+			AdminFlag importantFlags[] = {
+				Admin_Kick,
+				Admin_Ban,
+				Admin_Unban,
+				Admin_Slay,
+				Admin_Changemap,
+				Admin_Convars,
+				Admin_Config,
+				Admin_RCON,
+				Admin_Root
+			};
+
+			for (int i = 0; i < sizeof(importantFlags); i++)
+			{
+				if (GetAdminFlag(curAdm, importantFlags[i]))
+				{
+					hasImportantFlags = true;
+					break;
+				}
+			}
+
+			// Only remove admin if they don't have important flags
+			if (!hasImportantFlags)
+			{
+				// Remove the admin completely and recreate it
+				char sName[254];
+				GetClientName(client, sName, sizeof(sName));
+				RemoveAdmin(curAdm);
+				curAdm = CreateAdmin(sName);
+				if (!curAdm.BindIdentity(sAuthType, sAuth))
+				{
+					RemoveAdmin(curAdm);
+					delete Groups;
+					return;
+				}
+			}
+			else
+			{
+				// Admin has important flags, don't modify their permissions
+				delete Groups;
+				return;
+			}
+		}
 
 		for (int i = 0; i < Groups.Length; i++)
 		{
@@ -265,15 +312,26 @@ stock void LoadClient(int client)
 			if((grp = FindAdmGroup(sGroup)) == INVALID_GROUP_ID)
 			{
 				grp = CreateAdmGroup(sGroup);
-				if (StrEqual(sGroup, sVIPGroupName))
+				if (grp == INVALID_GROUP_ID)
 				{
-					SetAdmGroupAddFlag(grp, Admin_Custom1, true);
-					SetAdmGroupAddFlag(grp, Admin_Custom2, true);
-					SetAdmGroupImmunityLevel(grp, g_cvVIPGroupImmunity.IntValue);
+					LogError("Failed to create admin group: %s", sGroup);
+					continue;
 				}
 			}
 
-			AdminInheritGroup(curAdm, grp);
+			if (StrEqual(sGroup, sVIPGroupName))
+			{
+				// Force set the flags for VIP group
+				SetAdmGroupAddFlag(grp, Admin_Custom1, true);
+				SetAdmGroupAddFlag(grp, Admin_Custom2, true);
+				SetAdmGroupImmunityLevel(grp, g_cvVIPGroupImmunity.IntValue);
+			}
+
+			// Force inherit the group
+			if (!AdminInheritGroup(curAdm, grp))
+			{
+				LogError("Failed to inherit admin group %s for admin %s", sGroup, sAuth);
+			}
 		}
 	}
 
