@@ -14,13 +14,13 @@
 
 #define VIP_FEATURE_NAME	"VIP"
 
-ConVar g_cvVIPGroupName;
 ConVar g_cvVIPGroupImmunity;
 
 bool g_bClientLoaded[MAXPLAYERS + 1] = { false, ... };
 bool g_bSbppClientsLoaded = false;
 bool g_bReloadVips = false;
 bool g_bLibraryCCC = false;
+bool g_bLateLoaded = false;
 
 public Plugin myinfo =
 {
@@ -30,10 +30,19 @@ public Plugin myinfo =
 	version = "3.2.3"
 };
 
+public APLRes AskPluginLoad2(Handle myself, bool late, char[] error, int err_max)
+{
+	g_bLateLoaded = late;
+	return APLRes_Success;
+}
+
 public void OnAllPluginsLoaded()
 {
 	if (LibraryExists("ccc"))
 		g_bLibraryCCC = true;
+
+	if (g_bLateLoaded)
+		ReloadVIPs();
 }
 
 public void OnLibraryAdded(const char[] name)
@@ -51,8 +60,6 @@ public void OnLibraryRemoved(const char[] name)
 public void OnPluginStart()
 {
 	LoadTranslations("common.phrases");
-
-	g_cvVIPGroupName = CreateConVar("sm_vip_group_name", "VIP", "Group name of vip users");
 	g_cvVIPGroupImmunity = CreateConVar("sm_vip_group_immunity", "5", "Immunity level of vip users", 0, true, 0.0, true, 100.0);
 
 	RegAdminCmd("sm_reloadvips", Command_ReloadVips, ADMFLAG_BAN);
@@ -135,25 +142,29 @@ public void OnClientDisconnect(int client)
 
 public Action OnClientPreAdminCheck(int client)
 {
-	return g_bSbppClientsLoaded && g_bClientLoaded[client] ? Plugin_Continue : Plugin_Handled;
+	// If the client is VIP but not loaded yet, load them
+	if (!g_bClientLoaded[client] && VIP_IsClientVIP(client))
+	{
+		LoadVIPClient(client);
+		NotifyPostAdminCheck(client);
+		return Plugin_Handled;
+	}
+
+	return Plugin_Continue;
 }
 
 #if defined _sourcebanspp_included
 public bool SBPP_OnClientPreAdminCheck(AdminCachePart part)
 {
 	if (part == AdminCache_Admins)
+	{
 		g_bSbppClientsLoaded = true;
 
-	for (int client = 1; client <= MaxClients; client++)
-		CheckLoadAdmin(client);
-
-	if (part == AdminCache_Admins)
-	{
 		if (g_bReloadVips)
 			ReloadVIPs();
+
 		g_bReloadVips = false;
 	}
-
 	return false;
 }
 #endif
@@ -180,26 +191,14 @@ public void VIP_OnVIPClientRemoved(int client, const char[] szReason, int iAdmin
 
 stock void UnloadVIPClient(int client)
 {
+	if (!client)
+		return;
+
 	RemoveClient(client);
 
 #if defined _ccc_included
 	if (g_bLibraryCCC && GetFeatureStatus(FeatureType_Native, "CCC_UnLoadClient") == FeatureStatus_Available)
 		CCC_UnLoadClient(client);
-#endif
-
-	ServerCommand("sm_reloadadmins");
-}
-
-stock void LoadVIPClient(int client)
-{
-	if (!client)
-		return;
-
-	LoadClient(client);
-
-#if defined _ccc_included
-	if (g_bLibraryCCC && GetFeatureStatus(FeatureType_Native, "CCC_LoadClient") == FeatureStatus_Available)
-		CCC_LoadClient(client);
 #endif
 }
 
@@ -210,136 +209,73 @@ stock void RemoveClient(int client)
 	GetClientAuthId(client, AuthId_Steam2, sAuth, sizeof(sAuth));
 
 	AdminId curAdm = INVALID_ADMIN_ID;
-	// find and delete the admin using that identity
 	if ((curAdm = FindAdminByIdentity(sAuthType, sAuth)) != INVALID_ADMIN_ID)
 	{
-		RemoveAdmin(curAdm);
+		// Remove VIP flags
+		SetAdminFlag(curAdm, Admin_Custom1, false);
+		SetAdminFlag(curAdm, Admin_Custom2, false);
+
+		// Check if current immunity is from VIP
+		int currentImmunity = GetAdminImmunityLevel(curAdm);
+		int vipImmunity = g_cvVIPGroupImmunity.IntValue;
+
+		// If current immunity matches VIP immunity, reset it to 0
+		if (currentImmunity == vipImmunity)
+		{
+			SetAdminImmunityLevel(curAdm, 0);
+		}
 	}
 
-	g_bClientLoaded[client] = true;
-
+	g_bClientLoaded[client] = false;
 	CheckLoadAdmin(client);
 }
 
-stock void LoadClient(int client)
+stock void LoadVIPClient(int client)
 {
-	ArrayList Groups = new ArrayList(ByteCountToCells(32));
-	char sVIPGroupName[64];
+	if (!client)
+		return;
+
+	char sAuthType[] = "steam";
+	char sAuth[32];
+	GetClientAuthId(client, AuthId_Steam2, sAuth, sizeof(sAuth));
+
+	AdminId curAdm = INVALID_ADMIN_ID;
+	if ((curAdm = FindAdminByIdentity(sAuthType, sAuth)) == INVALID_ADMIN_ID)
+	{
+		char sName[254];
+		GetClientName(client, sName, sizeof(sName));
+		curAdm = CreateAdmin(sName);
+		if (!curAdm.BindIdentity(sAuthType, sAuth))
+		{
+			RemoveAdmin(curAdm);
+			return;
+		}
+	}
 
 	if (VIP_IsClientVIP(client))
 	{
-		if (!VIP_GetClientVIPGroup(client, sVIPGroupName, sizeof(sVIPGroupName)))
-			g_cvVIPGroupName.GetString(sVIPGroupName, sizeof(sVIPGroupName));
+		// Add VIP flags to existing admin
+		SetAdminFlag(curAdm, Admin_Custom1, true);
+		SetAdminFlag(curAdm, Admin_Custom2, true);
 
-		Groups.PushString(sVIPGroupName);
-	}
+		// Check current immunity level
+		int currentImmunity = GetAdminImmunityLevel(curAdm);
+		int vipImmunity = g_cvVIPGroupImmunity.IntValue;
 
-	if (Groups.Length)
-	{
-		char sAuthType[] = "steam";
-		char sAuth[32];
-		GetClientAuthId(client, AuthId_Steam2, sAuth, sizeof(sAuth));
-
-		AdminId curAdm = INVALID_ADMIN_ID;
-		// find or create the admin using that identity
-		if ((curAdm = FindAdminByIdentity(sAuthType, sAuth)) == INVALID_ADMIN_ID)
+		// Only set VIP immunity if it's higher than current immunity
+		if (vipImmunity > currentImmunity)
 		{
-			char sName[254];
-			GetClientName(client, sName, sizeof(sName));
-			curAdm = CreateAdmin(sName);
-			// That should never happen!
-			if (!curAdm.BindIdentity(sAuthType, sAuth))
-			{
-				RemoveAdmin(curAdm);
-				delete Groups;
-				return;
-			}
-		}
-		else
-		{
-			// Check if admin has important flags
-			bool hasImportantFlags = false;
-			AdminFlag importantFlags[] = {
-				Admin_Kick,
-				Admin_Ban,
-				Admin_Unban,
-				Admin_Slay,
-				Admin_Changemap,
-				Admin_Convars,
-				Admin_Config,
-				Admin_RCON,
-				Admin_Root
-			};
-
-			for (int i = 0; i < sizeof(importantFlags); i++)
-			{
-				if (GetAdminFlag(curAdm, importantFlags[i]))
-				{
-					hasImportantFlags = true;
-					break;
-				}
-			}
-
-			// Only remove admin if they don't have important flags
-			if (!hasImportantFlags)
-			{
-				// Remove the admin completely and recreate it
-				char sName[254];
-				GetClientName(client, sName, sizeof(sName));
-				RemoveAdmin(curAdm);
-				curAdm = CreateAdmin(sName);
-				if (!curAdm.BindIdentity(sAuthType, sAuth))
-				{
-					RemoveAdmin(curAdm);
-					delete Groups;
-					return;
-				}
-			}
-			else
-			{
-				// Admin has important flags, don't modify their permissions
-				delete Groups;
-				return;
-			}
-		}
-
-		for (int i = 0; i < Groups.Length; i++)
-		{
-			char sGroup[32];
-			Groups.GetString(i, sGroup, sizeof(sGroup));
-
-			GroupId grp;
-			if((grp = FindAdmGroup(sGroup)) == INVALID_GROUP_ID)
-			{
-				grp = CreateAdmGroup(sGroup);
-				if (grp == INVALID_GROUP_ID)
-				{
-					LogError("Failed to create admin group: %s", sGroup);
-					continue;
-				}
-			}
-
-			if (StrEqual(sGroup, sVIPGroupName))
-			{
-				// Force set the flags for VIP group
-				SetAdmGroupAddFlag(grp, Admin_Custom1, true);
-				SetAdmGroupAddFlag(grp, Admin_Custom2, true);
-				SetAdmGroupImmunityLevel(grp, g_cvVIPGroupImmunity.IntValue);
-			}
-
-			// Force inherit the group
-			if (!AdminInheritGroup(curAdm, grp))
-			{
-				LogError("Failed to inherit admin group %s for admin %s", sGroup, sAuth);
-			}
+			SetAdminImmunityLevel(curAdm, vipImmunity);
 		}
 	}
-
-	delete Groups;
 
 	g_bClientLoaded[client] = true;
-
 	CheckLoadAdmin(client);
+
+#if defined _ccc_included
+	if (g_bLibraryCCC && GetFeatureStatus(FeatureType_Native, "CCC_LoadClient") == FeatureStatus_Available)
+		CCC_LoadClient(client);
+#endif
 }
 
 stock void CheckLoadAdmin(int client)
