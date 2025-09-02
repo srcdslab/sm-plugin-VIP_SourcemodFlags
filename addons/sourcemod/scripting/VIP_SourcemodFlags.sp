@@ -142,10 +142,14 @@ public void OnClientDisconnect(int client)
 
 public Action OnClientPreAdminCheck(int client)
 {
-	// If the client is VIP but not loaded yet, load them
-	if (!g_bClientLoaded[client] && VIP_IsClientVIP(client))
+	// If the client hasn't been processed yet, handle both VIP and non-VIP
+	if (!g_bClientLoaded[client])
 	{
-		LoadVIPClient(client);
+		if (VIP_IsClientVIP(client))
+			LoadVIPClient(client);
+		else
+			g_bClientLoaded[client] = true; // Non-VIP clients should be marked as processed so they are not blocked
+
 		NotifyPostAdminCheck(client);
 		return Plugin_Handled;
 	}
@@ -226,8 +230,8 @@ stock void RemoveClient(int client)
 		}
 	}
 
-	g_bClientLoaded[client] = false;
-	CheckLoadAdmin(client);
+	// Keep client marked as processed; do not reset the loaded flag here
+	TryNotifyPostAdminCheck(client);
 }
 
 stock void LoadVIPClient(int client)
@@ -270,7 +274,7 @@ stock void LoadVIPClient(int client)
 	}
 
 	g_bClientLoaded[client] = true;
-	CheckLoadAdmin(client);
+	TryNotifyPostAdminCheck(client);
 
 #if defined _ccc_included
 	if (g_bLibraryCCC && GetFeatureStatus(FeatureType_Native, "CCC_LoadClient") == FeatureStatus_Available)
@@ -278,7 +282,8 @@ stock void LoadVIPClient(int client)
 #endif
 }
 
-stock void CheckLoadAdmin(int client)
+// Ensure admin cache is applied and notify post-admin check when ready
+stock void TryNotifyPostAdminCheck(int client)
 {
 	if (IsClientInGame(client) && IsClientAuthorized(client))
 	{
