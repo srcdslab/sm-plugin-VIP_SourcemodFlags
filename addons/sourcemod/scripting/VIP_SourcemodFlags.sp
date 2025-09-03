@@ -22,6 +22,10 @@ bool g_bReloadVips = false;
 bool g_bLibraryCCC = false;
 bool g_bLateLoaded = false;
 
+// Track original immunity levels and VIP immunity status
+int g_iOriginalImmunity[MAXPLAYERS + 1] = { 0, ... };
+bool g_bVIPImmunityApplied[MAXPLAYERS + 1] = { false, ... };
+
 public Plugin myinfo =
 {
 	name = "[VIP] Sourcemod Flags",
@@ -73,7 +77,11 @@ public void OnMapEnd()
 	g_bSbppClientsLoaded = false;
 	g_bReloadVips = false;
 	for (int i = 0; i <= MaxClients; i++)
+	{
 		g_bClientLoaded[i] = false;
+		g_iOriginalImmunity[i] = 0;
+		g_bVIPImmunityApplied[i] = false;
+	}
 }
 
 public Action Command_ReloadVips(int client, int args)
@@ -138,6 +146,8 @@ public bool OnClientConnect(int client, char[] rejectmsg, int maxlen)
 public void OnClientDisconnect(int client)
 {
 	g_bClientLoaded[client] = false;
+	g_iOriginalImmunity[client] = 0;
+	g_bVIPImmunityApplied[client] = false;
 }
 
 public Action OnClientPreAdminCheck(int client)
@@ -199,6 +209,10 @@ stock void UnloadVIPClient(int client)
 		return;
 
 	RemoveClient(client);
+	
+	// Reset client loaded flag to allow reprocessing if VIP status is regained
+	g_bClientLoaded[client] = false;
+	g_bVIPImmunityApplied[client] = false;
 
 #if defined _ccc_included
 	if (g_bLibraryCCC && GetFeatureStatus(FeatureType_Native, "CCC_UnLoadClient") == FeatureStatus_Available)
@@ -219,18 +233,14 @@ stock void RemoveClient(int client)
 		SetAdminFlag(curAdm, Admin_Custom1, false);
 		SetAdminFlag(curAdm, Admin_Custom2, false);
 
-		// Check if current immunity is from VIP
-		int currentImmunity = GetAdminImmunityLevel(curAdm);
-		int vipImmunity = g_cvVIPGroupImmunity.IntValue;
-
-		// If current immunity matches VIP immunity, reset it to 0
-		if (currentImmunity == vipImmunity)
+		// Only restore immunity if VIP immunity was actually applied
+		if (g_bVIPImmunityApplied[client])
 		{
-			SetAdminImmunityLevel(curAdm, 0);
+			// Restore original immunity level
+			SetAdminImmunityLevel(curAdm, g_iOriginalImmunity[client]);
 		}
 	}
 
-	// Keep client marked as processed; do not reset the loaded flag here
 	TryNotifyPostAdminCheck(client);
 }
 
@@ -266,10 +276,19 @@ stock void LoadVIPClient(int client)
 		int currentImmunity = GetAdminImmunityLevel(curAdm);
 		int vipImmunity = g_cvVIPGroupImmunity.IntValue;
 
+		// Store original immunity level before applying VIP immunity
+		g_iOriginalImmunity[client] = currentImmunity;
+
 		// Only set VIP immunity if it's higher than current immunity
 		if (vipImmunity > currentImmunity)
 		{
 			SetAdminImmunityLevel(curAdm, vipImmunity);
+			g_bVIPImmunityApplied[client] = true;
+		}
+		else
+		{
+			// VIP immunity not applied because current immunity is higher
+			g_bVIPImmunityApplied[client] = false;
 		}
 	}
 
@@ -282,7 +301,7 @@ stock void LoadVIPClient(int client)
 #endif
 }
 
-// Ensure admin cache is applied and notify post-admin check when ready
+// Apply admin cache and conditionally notify post-admin check if client is ready and SBPP is loaded
 stock void TryNotifyPostAdminCheck(int client)
 {
 	if (IsClientInGame(client) && IsClientAuthorized(client))
