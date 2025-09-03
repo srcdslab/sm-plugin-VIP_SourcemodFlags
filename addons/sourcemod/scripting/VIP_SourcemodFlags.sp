@@ -160,7 +160,7 @@ public Action OnClientPreAdminCheck(int client)
 		else
 			g_bClientLoaded[client] = true; // Non-VIP clients should be marked as processed so they are not blocked
 
-		NotifyPostAdminCheck(client);
+		TryNotifyPostAdminCheck(client);
 		return Plugin_Handled;
 	}
 
@@ -209,7 +209,7 @@ stock void UnloadVIPClient(int client)
 		return;
 
 	RemoveClient(client);
-	
+
 	// Reset client loaded flag to allow reprocessing if VIP status is regained
 	g_bClientLoaded[client] = false;
 	g_bVIPImmunityApplied[client] = false;
@@ -308,8 +308,12 @@ stock void TryNotifyPostAdminCheck(int client)
 	{
 		RunAdminCacheChecks(client);
 
+	#if defined _sourcebanspp_included
 		if (g_bSbppClientsLoaded && g_bClientLoaded[client])
+		{
 			NotifyPostAdminCheck(client);
+		}
+	#endif
 	}
 }
 
