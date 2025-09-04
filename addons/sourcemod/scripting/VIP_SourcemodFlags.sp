@@ -161,7 +161,7 @@ public Action OnClientPreAdminCheck(int client)
 			g_bClientLoaded[client] = true; // Non-VIP clients should be marked as processed so they are not blocked
 
 		TryNotifyPostAdminCheck(client);
-		return Plugin_Handled;
+		return Plugin_Continue;
 	}
 
 	return Plugin_Continue;
@@ -276,8 +276,9 @@ stock void LoadVIPClient(int client)
 		int currentImmunity = GetAdminImmunityLevel(curAdm);
 		int vipImmunity = g_cvVIPGroupImmunity.IntValue;
 
-		// Store original immunity level before applying VIP immunity
-		g_iOriginalImmunity[client] = currentImmunity;
+		// Store original immunity level only if VIP immunity was not previously applied
+		if (!g_bVIPImmunityApplied[client])
+			g_iOriginalImmunity[client] = currentImmunity;
 
 		// Only set VIP immunity if it's higher than current immunity
 		if (vipImmunity > currentImmunity)
