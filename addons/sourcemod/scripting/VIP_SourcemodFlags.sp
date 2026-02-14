@@ -2,7 +2,6 @@
 
 #include <sourcemod>
 #include <vip_core>
-#include <multicolors>
 #include <utilshelper>
 
 #undef REQUIRE_PLUGIN
@@ -31,7 +30,7 @@ public Plugin myinfo =
 	name = "[VIP] Sourcemod Flags",
 	author = "R1KO & inGame & maxime1907",
 	description = "Sets the sourcemod flags related to VIP features",
-	version = "3.2.3"
+	version = "3.2.4"
 };
 
 public APLRes AskPluginLoad2(Handle myself, bool late, char[] error, int err_max)
@@ -97,7 +96,7 @@ public Action Command_GetImmunityLevel(int client, int args)
 
 	if (args < 1)
 	{
-		CPrintToChat(client, "{green}[SM] {white}Usage: sm_adminimmunity <#userid|name>");
+		PrintToChat(client, "[SM] Usage: sm_adminimmunity <#userid|name>");
 		return Plugin_Handled;
 	}
 
@@ -118,7 +117,7 @@ public Action Command_GetImmunityLevel(int client, int args)
 	{
 		AdminId aid = GetUserAdmin(iTargets[i]);
 		int iImmunityLevel = GetAdminImmunityLevel(aid);
-		CPrintToChat(client, "{green}[SM] {white}Immunity level of player %N is %d", iTargets[i], iImmunityLevel);
+		PrintToChat(client, "[SM] Immunity level of player %N is %d", iTargets[i], iImmunityLevel);
 	}
 
 	return Plugin_Handled;
