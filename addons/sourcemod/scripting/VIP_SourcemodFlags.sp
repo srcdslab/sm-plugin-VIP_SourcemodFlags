@@ -20,6 +20,7 @@ bool g_bSbppClientsLoaded = false;
 bool g_bReloadVips = false;
 bool g_bLibraryCCC = false;
 bool g_bLateLoaded = false;
+bool g_bInSBPPCallback = false;
 
 // Track original immunity levels and VIP immunity status
 int g_iOriginalImmunity[MAXPLAYERS + 1] = { 0, ... };
@@ -30,7 +31,7 @@ public Plugin myinfo =
 	name = "[VIP] Sourcemod Flags",
 	author = "R1KO & inGame & maxime1907",
 	description = "Sets the sourcemod flags related to VIP features",
-	version = "3.2.4"
+	version = "3.2.5"
 };
 
 public APLRes AskPluginLoad2(Handle myself, bool late, char[] error, int err_max)
@@ -174,11 +175,20 @@ public bool SBPP_OnClientPreAdminCheck(AdminCachePart part)
 		g_bSbppClientsLoaded = true;
 
 		if (g_bReloadVips)
+		{
+			// Apply VIP flags before CheckLoadAdmins calls NotifyPostAdminCheck.
+			// Use g_bInSBPPCallback to suppress per-client notifications here
+			// since CheckLoadAdmins will notify all clients after the forward returns.
+			g_bInSBPPCallback = true;
 			ReloadVIPs();
+			g_bInSBPPCallback = false;
+		}
 
 		g_bReloadVips = false;
 	}
-	return false;
+	// Return true so CheckLoadAdmins proceeds with NotifyPostAdminCheck for all clients,
+	// including those registered to this forward from other plugins.
+	return true;
 }
 #endif
 
@@ -309,7 +319,9 @@ stock void TryNotifyPostAdminCheck(int client)
 		RunAdminCacheChecks(client);
 
 	#if defined _sourcebanspp_included
-		if (g_bSbppClientsLoaded && g_bClientLoaded[client])
+		// Skip individual notification when inside SBPP callback: CheckLoadAdmins
+		// will call NotifyPostAdminCheck for all clients after the forward returns.
+		if (!g_bInSBPPCallback && g_bSbppClientsLoaded && g_bClientLoaded[client])
 		{
 			NotifyPostAdminCheck(client);
 		}
