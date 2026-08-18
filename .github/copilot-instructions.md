@@ -14,9 +14,9 @@ This repository contains a SourceMod plugin written in SourcePawn that manages V
 ## Technical Environment
 
 **Language**: SourcePawn (.sp files)
-**Platform**: SourceMod 1.11+ (as per sourceknight.yaml dependency)
-**Build System**: SourceKnight (Python-based build tool for SourceMod plugins)
-**Compiler**: SourceMod compiler (spcomp) - handled automatically by SourceKnight
+**Platform**: SourceMod 1.12+
+**Build System**: Native GitHub Actions (rumblefrog/setup-sp)
+**Compiler**: SourceMod compiler (spcomp) - installed and run by the CI workflow
 
 ### Dependencies
 - **sourcemod**: Core SourceMod framework (version 1.11.0-git6917)
@@ -28,26 +28,23 @@ This repository contains a SourceMod plugin written in SourcePawn that manages V
 
 ## Build System
 
-### SourceKnight Configuration
-The project uses SourceKnight as defined in `sourceknight.yaml`:
-- Dependencies are automatically downloaded and configured
-- Output directory: `/addons/sourcemod/plugins`
+### GitHub Actions Configuration
+The project builds via `.github/workflows/ci.yml`:
+- SourceMod compiler (spcomp) is installed via `rumblefrog/setup-sp@v1.3.1` pinned to SourceMod 1.12.x
+- Git dependencies (CustomChatColors, VIP-Core, sourcebans-pp, UtilsHelper) are cloned and their include files copied into `addons/sourcemod/scripting/include`
+- Output directory: `addons/sourcemod/plugins`
 - Target plugin: `VIP_SourcemodFlags`
 
 ### Building the Plugin
+The plugin is built automatically by CI on every push/PR. To build locally, install a SourcePawn compiler matching SourceMod 1.12.x, place the dependency include files under `addons/sourcemod/scripting/include`, then run:
 ```bash
-# Install SourceKnight (if not already installed)
-pip install sourceknight
-
-# Build the plugin
-sourceknight build
+spcomp -i include -o ../plugins/VIP_SourcemodFlags.smx VIP_SourcemodFlags.sp
 ```
 
 ### CI/CD Pipeline
-The repository uses GitHub Actions (`.github/workflows/ci.yml`):
+The repository uses native GitHub Actions (`.github/workflows/ci.yml`):
 - Automatically builds on push/PR to any branch
-- Creates releases for tagged versions and latest builds
-- Uses `maxime1907/action-sourceknight@v1` action
+- Creates releases for tagged versions and latest ("latest" tag) builds on master/main
 
 ## Code Style & Standards
 
@@ -107,8 +104,8 @@ addons/sourcemod/scripting/
 ## Working with Dependencies
 
 ### Required Dependencies
-All required dependencies are managed through `sourceknight.yaml`. When adding new dependencies:
-1. Add to the `dependencies` section in `sourceknight.yaml`
+All required dependencies are cloned and copied in the `.github/workflows/ci.yml` "Install dependencies" step. When adding new dependencies:
+1. Add a `git clone` + `cp` block for the new dependency in `.github/workflows/ci.yml`
 2. Update the include statements in the plugin file
 3. Test the build process
 
@@ -154,9 +151,8 @@ public Action Command_NewCommand(int client, int args)
 ## File Locations
 
 - **Plugin source**: `addons/sourcemod/scripting/VIP_SourcemodFlags.sp`
-- **Build config**: `sourceknight.yaml`
 - **CI/CD**: `.github/workflows/ci.yml`
-- **Compiled output**: `.sourceknight/package/addons/sourcemod/plugins/VIP_SourcemodFlags.smx`
+- **Compiled output**: `addons/sourcemod/plugins/VIP_SourcemodFlags.smx`
 
 ## Best Practices
 
@@ -172,7 +168,7 @@ public Action Command_NewCommand(int client, int args)
 ## Troubleshooting
 
 ### Build Issues
-- Verify all dependencies are listed in `sourceknight.yaml`
+- Verify all dependencies are cloned in the `.github/workflows/ci.yml` "Install dependencies" step
 - Check for syntax errors using SourceMod compiler warnings
 - Ensure proper include file placement
 
