@@ -31,7 +31,7 @@ public Plugin myinfo =
 	name = "[VIP] Sourcemod Flags",
 	author = "R1KO & inGame & maxime1907",
 	description = "Sets the sourcemod flags related to VIP features",
-	version = "3.2.5"
+	version = "3.2.6"
 };
 
 public APLRes AskPluginLoad2(Handle myself, bool late, char[] error, int err_max)
@@ -64,6 +64,7 @@ public void OnLibraryRemoved(const char[] name)
 public void OnPluginStart()
 {
 	LoadTranslations("common.phrases");
+	LoadTranslations("VIP_SourcemodFlags.phrases");
 	g_cvVIPGroupImmunity = CreateConVar("sm_vip_group_immunity", "5", "Immunity level of vip users", 0, true, 0.0, true, 100.0);
 
 	RegAdminCmd("sm_reloadvips", Command_ReloadVips, ADMFLAG_BAN);
@@ -97,7 +98,7 @@ public Action Command_GetImmunityLevel(int client, int args)
 
 	if (args < 1)
 	{
-		PrintToChat(client, "[SM] Usage: sm_adminimmunity <#userid|name>");
+		PrintToChat(client, "[SM] %t", "AdminImmunity Usage");
 		return Plugin_Handled;
 	}
 
@@ -118,7 +119,7 @@ public Action Command_GetImmunityLevel(int client, int args)
 	{
 		AdminId aid = GetUserAdmin(iTargets[i]);
 		int iImmunityLevel = GetAdminImmunityLevel(aid);
-		PrintToChat(client, "[SM] Immunity level of player %N is %d", iTargets[i], iImmunityLevel);
+		PrintToChat(client, "[SM] %t", "Player Immunity Level", iTargets[i], iImmunityLevel);
 	}
 
 	return Plugin_Handled;
