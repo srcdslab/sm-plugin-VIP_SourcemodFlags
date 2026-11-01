@@ -1,0 +1,24 @@
+"Phrases"
+{
+	"AdminImmunity Usage"
+	{
+		"en"		"Usage: sm_adminimmunity <#userid|name>"
+		"fr"		"Utilisation : sm_adminimmunity <#userid|name>"
+		"ru"		"Использование: sm_adminimmunity <#userid|name>"
+		"es"		"Uso: sm_adminimmunity <#userid|name>"
+		"de"		"Verwendung: sm_adminimmunity <#userid|name>"
+		"pt"		"Uso: sm_adminimmunity <#userid|name>"
+		"chi"		"用法：sm_adminimmunity <#userid|name>"
+	}
+	"Player Immunity Level"
+	{
+		"#format"	"{1:N},{2:d}"
+		"en"		"Immunity level of player {1} is {2}."
+		"fr"		"Le niveau d'immunité du joueur {1} est de {2}."
+		"ru"		"Уровень иммунитета игрока {1}: {2}."
+		"es"		"El nivel de inmunidad del jugador {1} es {2}."
+		"de"		"Die Immunitätsstufe von Spieler {1} ist {2}."
+		"pt"		"O nível de imunidade do jogador {1} é {2}."
+		"chi"		"玩家 {1} 的免疫等级为 {2}。"
+	}
+}
