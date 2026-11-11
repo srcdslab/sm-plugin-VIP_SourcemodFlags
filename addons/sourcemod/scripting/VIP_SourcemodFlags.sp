@@ -31,7 +31,7 @@ public Plugin myinfo =
 	name = "[VIP] Sourcemod Flags",
 	author = "R1KO & inGame & maxime1907",
 	description = "Sets the sourcemod flags related to VIP features",
-	version = "3.2.6"
+	version = "3.2.7"
 };
 
 public APLRes AskPluginLoad2(Handle myself, bool late, char[] error, int err_max)
