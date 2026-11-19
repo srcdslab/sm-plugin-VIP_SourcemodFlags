@@ -9,6 +9,12 @@
 		"de"		"Verwendung: sm_adminimmunity <#userid|name>"
 		"pt"		"Uso: sm_adminimmunity <#userid|name>"
 		"chi"		"用法：sm_adminimmunity <#userid|name>"
+		"pl"		"Użycie: sm_adminimmunity <#userid|name>"
+		"tr"		"Kullanım: sm_adminimmunity <#userid|name>"
+		"it"		"Uso: sm_adminimmunity <#userid|name>"
+		"ua"		"Використання: sm_adminimmunity <#userid|name>"
+		"zho"		"用法：sm_adminimmunity <#userid|name>"
+		"cze"		"Použití: sm_adminimmunity <#userid|name>"
 	}
 	"Player Immunity Level"
 	{
@@ -20,5 +26,11 @@
 		"de"		"Die Immunitätsstufe von Spieler {1} ist {2}."
 		"pt"		"O nível de imunidade do jogador {1} é {2}."
 		"chi"		"玩家 {1} 的免疫等级为 {2}。"
+		"pl"		"Poziom immunitetu gracza {1} wynosi {2}."
+		"tr"		"{1} oyuncusunun dokunulmazlık seviyesi {2}."
+		"it"		"Il livello di immunità del giocatore {1} è {2}."
+		"ua"		"Рівень імунітету гравця {1}: {2}."
+		"zho"		"玩家 {1} 的免疫等級為 {2}。"
+		"cze"		"Úroveň imunity hráče {1} je {2}."
 	}
 }
